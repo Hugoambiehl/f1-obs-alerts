@@ -12,6 +12,7 @@ const db = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // Initialiser la base de données
 require('./database');
@@ -25,23 +26,37 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Configuration de la session avec PostgreSQL
-const pgSession = require('connect-pg-simple')(session);
-
-app.use(session({
-  store: new pgSession({
-    pool: db.pool,
-    tableName: 'session'
-  }),
-  secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 heures
-  }
-}));
+// Configuration de la session
+if (IS_PRODUCTION) {
+  // PostgreSQL en production
+  const pgSession = require('connect-pg-simple')(session);
+  app.use(session({
+    store: new pgSession({
+      pool: db.pool,
+      tableName: 'session'
+    }),
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: true,
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000
+    }
+  }));
+} else {
+  // Sessions en mémoire pour le développement (SQLite)
+  app.use(session({
+    secret: 'dev-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false,
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000
+    }
+  }));
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -60,7 +75,7 @@ app.get('/', (req, res) => {
 // Démarrage du serveur
 app.listen(PORT, async () => {
   console.log(`\n🚀 Serveur lancé sur http://localhost:${PORT}`);
-  console.log(`📊 Environnement: ${process.env.NODE_ENV || 'development'}\n`);
+  console.log(`📊 Mode: ${IS_PRODUCTION ? 'PRODUCTION (PostgreSQL)' : 'DÉVELOPPEMENT (SQLite)'}\n`);
   console.log('🔗 Connexion à OBS en cours...\n');
   
   // Essayer de se connecter à OBS au démarrage
@@ -68,7 +83,7 @@ app.listen(PORT, async () => {
   if (obsConnected) {
     console.log('✅ OBS connecté!\n');
   } else {
-    console.log('⚠️  OBS non disponible (continuez quand même, reconnexion automatique)\n');
+    console.log('⚠️  OBS non disponible (continuez quand même)\n');
   }
 });
 

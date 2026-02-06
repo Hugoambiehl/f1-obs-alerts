@@ -85,6 +85,38 @@ body {
   box-shadow: 0 0 10px rgba(255, 184, 28, 0.3);
 }
 
+/* ===== PASSWORD SHOW/HIDE ===== */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 45px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--secondary-color);
+  font-size: 18px;
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-password:hover {
+  color: var(--primary-color);
+  transform: scale(1.2);
+}
+
 /* ===== BOUTONS ===== */
 .btn {
   padding: 12px 24px;

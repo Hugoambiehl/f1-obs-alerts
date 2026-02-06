@@ -1,17 +1,44 @@
-const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
+const path = require('path');
 require('dotenv').config();
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-pool.on('error', (err) => {
-  console.error('Erreur de la base de données:', err);
-});
+let db;
+let pool;
 
-async function initDatabase() {
+// ===== POSTGRESQL (Production) =====
+if (IS_PRODUCTION) {
+  const { Pool } = require('pg');
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+
+  pool.on('error', (err) => {
+    console.error('❌ Erreur PostgreSQL:', err);
+  });
+
+  initDatabasePG();
+}
+
+// ===== SQLITE (Development) =====
+else {
+  const sqlite3 = require('sqlite3').verbose();
+  const dbPath = path.join(__dirname, '../db/app.db');
+
+  db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('❌ Erreur SQLite:', err);
+    } else {
+      console.log('✅ Connecté à SQLite');
+      initDatabaseSQLite();
+    }
+  });
+}
+
+// ===== INITIALISATION POSTGRESQL =====
+async function initDatabasePG() {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -32,87 +59,164 @@ async function initDatabase() {
       )
     `);
 
-    console.log('✅ Tables créées/vérifiées');
+    console.log('✅ Tables PostgreSQL créées');
   } catch (error) {
-    console.error('Erreur lors de l\'initialisation de la base:', error);
+    console.error('❌ Erreur initialisation PostgreSQL:', error);
   }
 }
 
-// Initialiser au démarrage
-initDatabase();
+// ===== INITIALISATION SQLITE =====
+function initDatabaseSQLite() {
+  db.serialize(() => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-// Fonctions pour les utilisateurs
+    db.run(`
+      CREATE TABLE IF NOT EXISTS alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        driver TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+
+    console.log('✅ Tables SQLite créées');
+  });
+}
+
+// ===== FONCTIONS POUR LES DEUX BD =====
+
 function createUser(username, password, callback) {
-  try {
-    const hashedPassword = bcrypt.hashSync(password, 10);
+  const hashedPassword = bcrypt.hashSync(password, 10);
+
+  if (IS_PRODUCTION) {
     pool.query(
       'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username',
       [username, hashedPassword],
       (error, result) => {
-        if (error) {
-          callback(error);
-        } else {
-          callback(null, result.rows[0]);
-        }
+        if (error) callback(error);
+        else callback(null, result.rows[0]);
       }
     );
-  } catch (error) {
-    callback(error);
+  } else {
+    db.run(
+      'INSERT INTO users (username, password) VALUES (?, ?)',
+      [username, hashedPassword],
+      function(err) {
+        if (err) callback(err);
+        else callback(null, { id: this.lastID, username });
+      }
+    );
   }
 }
 
 function getUserByUsername(username, callback) {
-  pool.query(
-    'SELECT * FROM users WHERE username = $1',
-    [username],
-    (error, result) => {
-      if (error) {
-        callback(error);
-      } else {
-        callback(null, result.rows[0]);
+  if (IS_PRODUCTION) {
+    pool.query(
+      'SELECT * FROM users WHERE username = $1',
+      [username],
+      (error, result) => {
+        if (error) callback(error);
+        else callback(null, result.rows[0]);
       }
-    }
-  );
+    );
+  } else {
+    db.get(
+      'SELECT * FROM users WHERE username = ?',
+      [username],
+      (err, row) => {
+        callback(err, row);
+      }
+    );
+  }
 }
 
 function verifyPassword(password, hashedPassword) {
   return bcrypt.compareSync(password, hashedPassword);
 }
 
-// Fonctions pour les alertes
 function saveAlert(userId, action, driver, callback) {
-  pool.query(
-    'INSERT INTO alerts (user_id, action, driver) VALUES ($1, $2, $3) RETURNING id',
-    [userId, action, driver],
-    (error, result) => {
-      if (error) {
-        callback(error);
-      } else {
-        callback(null, result.rows[0]);
+  if (IS_PRODUCTION) {
+    pool.query(
+      'INSERT INTO alerts (user_id, action, driver) VALUES ($1, $2, $3) RETURNING id',
+      [userId, action, driver],
+      (error, result) => {
+        if (error) callback(error);
+        else callback(null, result.rows[0]);
       }
-    }
-  );
+    );
+  } else {
+    db.run(
+      'INSERT INTO alerts (user_id, action, driver) VALUES (?, ?, ?)',
+      [userId, action, driver],
+      function(err) {
+        if (err) callback(err);
+        else callback(null, { id: this.lastID });
+      }
+    );
+  }
 }
 
 function getAlertHistory(userId, limit = 50, callback) {
-  pool.query(
-    'SELECT * FROM alerts WHERE user_id = $1 ORDER BY timestamp DESC LIMIT $2',
-    [userId, limit],
-    (error, result) => {
-      if (error) {
-        callback(error);
-      } else {
-        callback(null, result.rows);
+  if (IS_PRODUCTION) {
+    pool.query(
+      'SELECT * FROM alerts WHERE user_id = $1 ORDER BY timestamp DESC LIMIT $2',
+      [userId, limit],
+      (error, result) => {
+        if (error) callback(error);
+        else callback(null, result.rows);
       }
-    }
-  );
+    );
+  } else {
+    db.all(
+      'SELECT * FROM alerts WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?',
+      [userId, limit],
+      (err, rows) => {
+        callback(err, rows);
+      }
+    );
+  }
+}
+
+function resetUserPassword(username, password, callback) {
+  const hashedPassword = bcrypt.hashSync(password, 10);
+
+  if (IS_PRODUCTION) {
+    pool.query(
+      'UPDATE users SET password = $1 WHERE username = $2',
+      [hashedPassword, username],
+      (error) => {
+        if (error) callback(error);
+        else callback(null, { success: true });
+      }
+    );
+  } else {
+    db.run(
+      'UPDATE users SET password = ? WHERE username = ?',
+      [hashedPassword, username],
+      (err) => {
+        if (err) callback(err);
+        else callback(null, { success: true });
+      }
+    );
+  }
 }
 
 module.exports = {
+  db,
   pool,
   createUser,
   getUserByUsername,
   verifyPassword,
   saveAlert,
-  getAlertHistory
+  getAlertHistory,
+  resetUserPassword
 };

@@ -91,20 +91,12 @@ router.post('/reset-password', (req, res) => {
     }
 
     // Mettre à jour le mot de passe
-    const bcrypt = require('bcryptjs');
-    const hashedPassword = bcrypt.hashSync(password, 10);
-
-    const { pool } = db;
-    pool.query(
-      'UPDATE users SET password = $1 WHERE username = $2',
-      [hashedPassword, username],
-      (error) => {
-        if (error) {
-          return res.status(500).json({ error: 'Erreur lors de la réinitialisation' });
-        }
-        res.json({ success: true, message: 'Mot de passe réinitialisé' });
+    db.resetUserPassword(username, password, (error, result) => {
+      if (error) {
+        return res.status(500).json({ error: 'Erreur lors de la réinitialisation' });
       }
-    );
+      res.json({ success: true, message: 'Mot de passe réinitialisé' });
+    });
   });
 });
 

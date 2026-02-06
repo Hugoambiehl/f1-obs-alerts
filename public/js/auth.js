@@ -4,6 +4,21 @@ document.getElementById('password').addEventListener('keypress', (e) => {
   if (e.key === 'Enter') login();
 });
 
+// Afficher/Masquer le mot de passe
+document.getElementById('toggle-password').addEventListener('click', (e) => {
+  e.preventDefault();
+  const passwordInput = document.getElementById('password');
+  const toggleBtn = document.getElementById('toggle-password');
+  
+  if (passwordInput.type === 'password') {
+    passwordInput.type = 'text';
+    toggleBtn.textContent = '🙈';
+  } else {
+    passwordInput.type = 'password';
+    toggleBtn.textContent = '👁️';
+  }
+});
+
 // Mot de passe oublié
 document.getElementById('link-forgot').addEventListener('click', (e) => {
   e.preventDefault();
