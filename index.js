@@ -6,9 +6,9 @@ const session = require('express-session');
 const path = require('path');
 require('dotenv').config();
 
-const authRoutes = require('../server/routes/auth');
-const alertsRoutes = require('../server/routes/alerts');
-const obsClient = require('../server/obs-client');
+const authRoutes = require('./server/routes/auth');
+const alertsRoutes = require('./server/routes/alerts');
+const obsClient = require('./server/obs-client');
 
 const app = express();
 
@@ -21,17 +21,15 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Servir les fichiers statiques (public)
-// Sur Vercel, le chemin doit être relatif à la racine du projet
-const publicPath = path.join(__dirname, '../public');
-app.use(express.static(publicPath));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuration de la session (mémoire pour Vercel - pas idéal mais compatible)
+// Configuration de la session
 app.use(session({
   secret: process.env.SESSION_SECRET || 'vercel-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000
@@ -44,16 +42,16 @@ app.use('/api/alerts', alertsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK' });
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // Servir index.html par défaut
 app.get('/', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(publicPath, 'dashboard.html'));
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // Gérer OBS (essai de connexion au démarrage)
@@ -61,9 +59,9 @@ app.get('/dashboard', (req, res) => {
   try {
     await obsClient.connect();
   } catch (e) {
-    console.log('OBS non disponible');
+    console.log('OBS non disponible au démarrage');
   }
 })();
 
-// Export pour Vercel
+// Export pour Vercel avec serverless-http
 module.exports = serverless(app);
