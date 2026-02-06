@@ -26,9 +26,38 @@
           <button id="btn-login" class="btn btn-primary">Se connecter</button>
           <button id="btn-register" class="btn btn-secondary">S'inscrire</button>
         </div>
+
+        <div class="forgot-password">
+          <a href="#" id="link-forgot">Mot de passe oublié ?</a>
+        </div>
       </div>
 
       <div id="message" class="message"></div>
+    </div>
+  </div>
+
+  <!-- Modale Mot de passe oublié -->
+  <div id="forgot-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Réinitialiser le mot de passe</h2>
+        <button class="modal-close" id="btn-close-forgot">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="forgot-step-1">
+          <p>Entrez votre pseudo :</p>
+          <input type="text" id="forgot-username" placeholder="Votre pseudo" class="form-control">
+          <button id="btn-reset-request" class="btn btn-primary" style="margin-top: 15px; width: 100%;">Continuer</button>
+        </div>
+        <div id="forgot-step-2" style="display: none;">
+          <p>Entrez votre nouveau mot de passe :</p>
+          <input type="password" id="forgot-password" placeholder="Nouveau mot de passe" class="form-control">
+          <input type="password" id="forgot-password-confirm" placeholder="Confirmer le mot de passe" class="form-control" style="margin-top: 10px;">
+          <button id="btn-reset-confirm" class="btn btn-primary" style="margin-top: 15px; width: 100%;">Réinitialiser</button>
+        </div>
+      </div>
+      <div id="forgot-message" class="message" style="margin-top: 15px;"></div>
+    </div>
     </div>
   </div>
 
