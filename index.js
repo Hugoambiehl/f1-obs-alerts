@@ -1,7 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const serverless = require('serverless-http');
 const session = require('express-session');
 const path = require('path');
 require('dotenv').config();
@@ -19,11 +18,6 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// Servir les fichiers statiques (public)
-const publicPath = path.join(__dirname, 'public');
-console.log('📁 Chemin public:', publicPath);
-app.use(express.static(publicPath));
 
 // Configuration de la session
 app.use(session({
@@ -47,18 +41,12 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// SPA fallback: toute route non-API va à index.html
+// Servir les fichiers statiques AVANT les routes catch-all
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Catch-all pour SPA: toute route non-API va à index.html
 app.get('*', (req, res) => {
-  // Éviter les fausses routes API
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'Route not found' });
-  }
-  res.sendFile(path.join(publicPath, 'index.html'), (err) => {
-    if (err) {
-      console.error('Erreur sendFile:', err);
-      res.status(500).send('Erreur serveur');
-    }
-  });
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Gérer OBS (essai de connexion au démarrage)
@@ -70,5 +58,5 @@ app.get('*', (req, res) => {
   }
 })();
 
-// Export pour Vercel avec serverless-http
-module.exports = serverless(app);
+// Export direct de l'app (Vercel la wrappera automatiquement)
+module.exports = app;
