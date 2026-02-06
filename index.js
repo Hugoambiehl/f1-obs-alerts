@@ -21,7 +21,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Servir les fichiers statiques (public)
-app.use(express.static(path.join(__dirname, 'public')));
+const publicPath = path.join(__dirname, 'public');
+console.log('📁 Chemin public:', publicPath);
+app.use(express.static(publicPath));
 
 // Configuration de la session
 app.use(session({
@@ -47,11 +49,20 @@ app.get('/health', (req, res) => {
 
 // Servir index.html par défaut
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  console.log('GET / - sending index.html');
+  const filePath = path.join(__dirname, 'public', 'index.html');
+  console.log('📄 Chemin fichier:', filePath);
+  res.sendFile(filePath, (err) => {
+    if (err) console.error('Erreur sendFile:', err);
+  });
 });
 
 app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+  console.log('GET /dashboard - sending dashboard.html');
+  const filePath = path.join(__dirname, 'public', 'dashboard.html');
+  res.sendFile(filePath, (err) => {
+    if (err) console.error('Erreur sendFile:', err);
+  });
 });
 
 // Gérer OBS (essai de connexion au démarrage)
