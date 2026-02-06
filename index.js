@@ -47,21 +47,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Servir index.html par défaut
-app.get('/', (req, res) => {
-  console.log('GET / - sending index.html');
-  const filePath = path.join(__dirname, 'public', 'index.html');
-  console.log('📄 Chemin fichier:', filePath);
-  res.sendFile(filePath, (err) => {
-    if (err) console.error('Erreur sendFile:', err);
-  });
-});
-
-app.get('/dashboard', (req, res) => {
-  console.log('GET /dashboard - sending dashboard.html');
-  const filePath = path.join(__dirname, 'public', 'dashboard.html');
-  res.sendFile(filePath, (err) => {
-    if (err) console.error('Erreur sendFile:', err);
+// SPA fallback: toute route non-API va à index.html
+app.get('*', (req, res) => {
+  // Éviter les fausses routes API
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Route not found' });
+  }
+  res.sendFile(path.join(publicPath, 'index.html'), (err) => {
+    if (err) {
+      console.error('Erreur sendFile:', err);
+      res.status(500).send('Erreur serveur');
+    }
   });
 });
 
