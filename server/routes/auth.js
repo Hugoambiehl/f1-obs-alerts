@@ -94,7 +94,8 @@ router.post('/reset-password', (req, res) => {
     const bcrypt = require('bcryptjs');
     const hashedPassword = bcrypt.hashSync(password, 10);
 
-    db.pool.query(
+    const { pool } = db;
+    pool.query(
       'UPDATE users SET password = $1 WHERE username = $2',
       [hashedPassword, username],
       (error) => {

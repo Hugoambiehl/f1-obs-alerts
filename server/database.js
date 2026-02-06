@@ -42,29 +42,37 @@ async function initDatabase() {
 initDatabase();
 
 // Fonctions pour les utilisateurs
-async function createUser(username, password, callback) {
+function createUser(username, password, callback) {
   try {
     const hashedPassword = bcrypt.hashSync(password, 10);
-    const result = await pool.query(
+    pool.query(
       'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username',
-      [username, hashedPassword]
+      [username, hashedPassword],
+      (error, result) => {
+        if (error) {
+          callback(error);
+        } else {
+          callback(null, result.rows[0]);
+        }
+      }
     );
-    callback(null, result.rows[0]);
   } catch (error) {
     callback(error);
   }
 }
 
-async function getUserByUsername(username, callback) {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM users WHERE username = $1',
-      [username]
-    );
-    callback(null, result.rows[0]);
-  } catch (error) {
-    callback(error);
-  }
+function getUserByUsername(username, callback) {
+  pool.query(
+    'SELECT * FROM users WHERE username = $1',
+    [username],
+    (error, result) => {
+      if (error) {
+        callback(error);
+      } else {
+        callback(null, result.rows[0]);
+      }
+    }
+  );
 }
 
 function verifyPassword(password, hashedPassword) {
@@ -72,28 +80,32 @@ function verifyPassword(password, hashedPassword) {
 }
 
 // Fonctions pour les alertes
-async function saveAlert(userId, action, driver, callback) {
-  try {
-    const result = await pool.query(
-      'INSERT INTO alerts (user_id, action, driver) VALUES ($1, $2, $3) RETURNING id',
-      [userId, action, driver]
-    );
-    callback(null, result.rows[0]);
-  } catch (error) {
-    callback(error);
-  }
+function saveAlert(userId, action, driver, callback) {
+  pool.query(
+    'INSERT INTO alerts (user_id, action, driver) VALUES ($1, $2, $3) RETURNING id',
+    [userId, action, driver],
+    (error, result) => {
+      if (error) {
+        callback(error);
+      } else {
+        callback(null, result.rows[0]);
+      }
+    }
+  );
 }
 
-async function getAlertHistory(userId, limit = 50, callback) {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM alerts WHERE user_id = $1 ORDER BY timestamp DESC LIMIT $2',
-      [userId, limit]
-    );
-    callback(null, result.rows);
-  } catch (error) {
-    callback(error);
-  }
+function getAlertHistory(userId, limit = 50, callback) {
+  pool.query(
+    'SELECT * FROM alerts WHERE user_id = $1 ORDER BY timestamp DESC LIMIT $2',
+    [userId, limit],
+    (error, result) => {
+      if (error) {
+        callback(error);
+      } else {
+        callback(null, result.rows);
+      }
+    }
+  );
 }
 
 module.exports = {
