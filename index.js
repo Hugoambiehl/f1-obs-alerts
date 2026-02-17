@@ -49,7 +49,15 @@ app.use('/api/alerts', alertsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
+  res.set('X-Debug', 'health');
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// debug root quickly
+app.get('/', (req, res) => {
+  res.set('X-Debug', 'root-handler');
+  // don't bother serving file here, just respond so we know function executed
+  res.send('root ok');
 });
 
 // Debug route for environment info (API path)
