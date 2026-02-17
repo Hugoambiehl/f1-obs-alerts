@@ -36,10 +36,10 @@ app.use(session({
   }
 }));
 
-app.use('/api/auth', authRoutes);
-app.use('/api/alerts', alertsRoutes);
+app.use('/auth', authRoutes);
+app.use('/alerts', alertsRoutes);
 
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
