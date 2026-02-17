@@ -47,6 +47,18 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Debug route for environment info
+app.get('/debug', (req, res) => {
+  const { NODE_ENV, DATABASE_URL, SESSION_SECRET, OBS_ADDRESS, CLIENT_URL } = process.env;
+  res.json({
+    NODE_ENV,
+    DATABASE_URL: DATABASE_URL ? DATABASE_URL.replace(/:\/\/.*@/, '://***@') : null,
+    SESSION_SECRET: SESSION_SECRET ? '***' : null,
+    OBS_ADDRESS,
+    CLIENT_URL
+  });
+});
+
 // SPA fallback: toute route non-API va à index.html
 app.get('*', (req, res) => {
   // Éviter les fausses routes API
