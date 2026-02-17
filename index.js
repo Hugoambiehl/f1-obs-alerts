@@ -20,10 +20,9 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Servir les fichiers statiques (public)
+// note: static files are served automatically by Vercel from /public
 const publicPath = path.join(__dirname, 'public');
-console.log('📁 Chemin public:', publicPath);
-app.use(express.static(publicPath));
+console.log('📁 Chemin public (untouched):', publicPath);
 
 // Configuration de la session
 app.use(session({
@@ -47,8 +46,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Debug route for environment info
-app.get('/debug', (req, res) => {
+// Debug route for environment info (API path)
+app.get('/api/debug', (req, res) => {
   const { NODE_ENV, DATABASE_URL, SESSION_SECRET, OBS_ADDRESS, CLIENT_URL } = process.env;
   res.json({
     NODE_ENV,
@@ -59,19 +58,8 @@ app.get('/debug', (req, res) => {
   });
 });
 
-// SPA fallback: toute route non-API va à index.html
-app.get('*', (req, res) => {
-  // Éviter les fausses routes API
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'Route not found' });
-  }
-  res.sendFile(path.join(publicPath, 'index.html'), (err) => {
-    if (err) {
-      console.error('Erreur sendFile:', err);
-      res.status(500).send('Erreur serveur');
-    }
-  });
-});
+// no SPA fallback here; static files and HTML served by Vercel directly
+// any non-/api route will be handled by Vercel's public folder.
 
 // Gérer OBS (essai de connexion au démarrage)
 (async () => {
