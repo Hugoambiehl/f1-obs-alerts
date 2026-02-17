@@ -12,6 +12,12 @@ const obsClient = require('./server/obs-client');
 
 const app = express();
 
+// middleware de debug pour logguer chaque requête
+app.use((req, res, next) => {
+  console.log('📥 requête', req.method, req.url);
+  next();
+});
+
 // Middlewares
 app.use(cors({
   origin: process.env.CLIENT_URL || '*',
