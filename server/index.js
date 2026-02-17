@@ -12,7 +12,8 @@ const db = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+// production flag also requires DATABASE_URL, otherwise behave as dev
+let IS_PRODUCTION = process.env.NODE_ENV === 'production' && !!process.env.DATABASE_URL;
 
 // Initialiser la base de données
 require('./database');
@@ -27,7 +28,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Configuration de la session
-if (IS_PRODUCTION) {
+if (IS_PRODUCTION && db.pool) {
   // PostgreSQL en production
   const pgSession = require('connect-pg-simple')(session);
   app.use(session({
@@ -45,6 +46,9 @@ if (IS_PRODUCTION) {
     }
   }));
 } else {
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('⚠️  Using in-memory session store because PostgreSQL pool is not available');
+  }
   // Sessions en mémoire pour le développement (SQLite)
   app.use(session({
     secret: 'dev-secret-key',

@@ -2,10 +2,15 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 require('dotenv').config();
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+// determine environment; also require DATABASE_URL for prod
+let IS_PRODUCTION = process.env.NODE_ENV === 'production' && !!process.env.DATABASE_URL;
 
 let db;
 let pool;
+
+if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+  console.warn('⚠️  NODE_ENV=production but DATABASE_URL is not set – falling back to SQLite');
+}
 
 // ===== POSTGRESQL (Production) =====
 if (IS_PRODUCTION) {
